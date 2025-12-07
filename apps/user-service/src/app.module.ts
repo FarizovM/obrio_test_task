@@ -34,11 +34,11 @@ import { UserService } from './services/user.service';
             {
                 name: 'NOTIFICATION_SERVICE',
                 imports: [ConfigModule],
-                useFactory: async (configService: ConfigService): Promise<ClientProvider> => ({
+                useFactory: (configService: ConfigService) => ({
                     transport: Transport.RMQ,
                     options: {
-                        urls: [await configService.get<string>('RABBITMQ_URL') || 'amqp://user:password@localhost:5672'],
-                        queue: await configService.get<string>('RABBITMQ_QUEUE') || 'notification_queue',
+                        urls: [configService.get<string>('RABBITMQ_URL') || 'amqp://user:password@localhost:5672'],
+                        queue: configService.get<string>('RABBITMQ_QUEUE') || 'notification_queue',
                         queueOptions: {
                             durable: false,
                         },

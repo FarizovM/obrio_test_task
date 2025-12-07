@@ -1,26 +1,27 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import type { Queue } from 'bull';
+import { ConfigService } from '@nestjs/config';
 
 @Controller()
 export class NotificationController {
-    constructor(@InjectQueue('push-queue') private pushQueue: Queue) { }
+    // Інжектимо ConfigService
+    constructor(
+        @InjectQueue('push-queue') private pushQueue: Queue,
+        private readonly configService: ConfigService
+    ) { }
 
     @EventPattern('user_created')
     async handleUserCreated(@Payload() data: any) {
         console.log('Received event from RabbitMQ:', data);
 
-        // Додаємо задачу в чергу Redis з затримкою 24 години
-        // 24 години = 24 * 60 * 60 * 1000 мс
-        const delay = 24 * 60 * 60 * 1000;
-
-        // Для тестування краще поставити 10000 (10 секунд), щоб не чекати добу
-        // const delay = 10000; 
+        // Беремо затримку з налаштувань або 24 години як дефолт
+        const delay = this.configService.get<number>('PUSH_DELAY_MS') || 86400000;
 
         await this.pushQueue.add('send-push', data, {
-            delay: delay,
-            removeOnComplete: true, // Видаляти задачу після успішного виконання
+            delay: Number(delay), // Redis вимагає число
+            removeOnComplete: true,
         });
 
         console.log(`Scheduled push notification for user ${data.name} in ${delay}ms`);
