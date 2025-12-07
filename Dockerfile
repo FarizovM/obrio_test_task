@@ -1,5 +1,5 @@
 # --- Stage 1: Builder ---
-    FROM node:18-alpine AS builder
+    FROM node:20-alpine AS builder
 
     WORKDIR /usr/src/app
     
@@ -18,7 +18,7 @@
     RUN npm run build notification-service
     
     # --- Stage 2: Production ---
-    FROM node:18-alpine AS production
+    FROM node:20-alpine AS production
     
     WORKDIR /usr/src/app
     
