@@ -10,7 +10,7 @@ import { NotificationProcessor } from './processors/notification.processor';
         BullModule.forRoot({
             redis: {
                 host: 'localhost',
-                port: 6379,
+                port: parseInt(process.env.REDIS_PORT || '6379'),
             },
         }),
         BullModule.registerQueue({

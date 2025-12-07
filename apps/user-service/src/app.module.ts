@@ -1,35 +1,50 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ClientProvider, ClientsModule, Transport } from '@nestjs/microservices';
 import { User } from './user.entity';
 import { UserController } from './controllers/user.controller';
 import { UserService } from './services/user.service';
 
 @Module({
     imports: [
-        TypeOrmModule.forRoot({
-            type: 'postgres',
-            host: process.env.POSTGRES_HOST || 'localhost', // 'postgres' у докері, 'localhost' локально
-            port: parseInt(process.env.POSTGRES_PORT) || 5432,
-            username: process.env.POSTGRES_USER || 'user',
-            password: process.env.POSTGRES_PASSWORD || 'password',
-            database: process.env.POSTGRES_DB || 'users_db',
-            entities: [User],
-            synchronize: true,
+        ConfigModule.forRoot({
+            isGlobal: true,
+            envFilePath: '.env',
+        }),
+        // Використовуємо forRootAsync замість forRoot
+        TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: (configService: ConfigService) => ({
+                type: 'postgres',
+                host: configService.get<string>('POSTGRES_HOST'),
+                // Тут ConfigService сам розбереться з типами або поверне undefined, 
+                // тому додаємо || 5432 для надійності
+                port: configService.get<number>('POSTGRES_PORT') || 5432,
+                username: configService.get<string>('POSTGRES_USER'),
+                password: configService.get<string>('POSTGRES_PASSWORD'),
+                database: configService.get<string>('POSTGRES_DB'),
+                entities: [User],
+                synchronize: true,
+            }),
+            inject: [ConfigService],
         }),
         TypeOrmModule.forFeature([User]),
-        // Налаштування клієнта RabbitMQ для відправки повідомлень
-        ClientsModule.register([
+        ClientsModule.registerAsync([
             {
                 name: 'NOTIFICATION_SERVICE',
-                transport: Transport.RMQ,
-                options: {
-                    urls: [process.env.RABBITMQ_URL || 'amqp://user:password@localhost:5672'],
-                    queue: 'notification_queue',
-                    queueOptions: {
-                        durable: false,
+                imports: [ConfigModule],
+                useFactory: async (configService: ConfigService): Promise<ClientProvider> => ({
+                    transport: Transport.RMQ,
+                    options: {
+                        urls: [await configService.get<string>('RABBITMQ_URL') || 'amqp://user:password@localhost:5672'],
+                        queue: await configService.get<string>('RABBITMQ_QUEUE') || 'notification_queue',
+                        queueOptions: {
+                            durable: false,
+                        },
                     },
-                },
+                }),
+                inject: [ConfigService],
             },
         ]),
     ],
