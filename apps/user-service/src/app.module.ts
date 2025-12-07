@@ -18,14 +18,12 @@ import { UserService } from './services/user.service';
             useFactory: (configService: ConfigService) => ({
                 type: 'postgres',
                 host: configService.get<string>('POSTGRES_HOST'),
-                // Тут ConfigService сам розбереться з типами або поверне undefined, 
-                // тому додаємо || 5432 для надійності
                 port: configService.get<number>('POSTGRES_PORT') || 5432,
                 username: configService.get<string>('POSTGRES_USER'),
                 password: configService.get<string>('POSTGRES_PASSWORD'),
                 database: configService.get<string>('POSTGRES_DB'),
                 entities: [User],
-                synchronize: true,
+                synchronize: false, // false для вимкнення автоматичного синхронізації (Для production)
             }),
             inject: [ConfigService],
         }),
