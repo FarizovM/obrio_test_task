@@ -14,7 +14,7 @@ export class NotificationProcessor {
     @Process('send-push')
     async handleSendPush(job: Job) {
         const userData = job.data;
-        const webhookUrl = this.configService.get<string>('WEBHOOK_URL'); // Беремо тут
+        const webhookUrl = this.configService.get<string>('WEBHOOK_URL'); // Беремо тут посилання на webhook сервіс
 
         console.log(`Processing push for user: ${userData.name}...`);
 
