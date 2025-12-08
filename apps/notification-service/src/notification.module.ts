@@ -2,7 +2,8 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { HttpModule } from '@nestjs/axios';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // Додай імпорти
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as Joi from 'joi';
 import { NotificationController } from './controllers/notification.controller';
 import { NotificationProcessor } from './processors/notification.processor';
 
@@ -11,8 +12,23 @@ import { NotificationProcessor } from './processors/notification.processor';
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
+            // === ВАЛІДАЦІЯ ===
+            validationSchema: Joi.object({
+                // RabbitMQ
+                RABBITMQ_URL: Joi.string().uri().required(),
+                // Redis
+                REDIS_HOST: Joi.string().required(),
+                REDIS_PORT: Joi.number().default(6379),
+                // External & Logic
+                WEBHOOK_URL: Joi.string().uri().required(),
+                PUSH_DELAY_MS: Joi.number().default(86400000),
+            }),
+            validationOptions: {
+                allowUnknown: true,
+                abortEarly: true,
+            },
         }),
-        // Використовуємо Async конфігурацію для Redis
+        // Async конфігурацію для Redis
         BullModule.forRootAsync({
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => ({

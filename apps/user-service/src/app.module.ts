@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientProvider, ClientsModule, Transport } from '@nestjs/microservices';
+import * as Joi from 'joi';
 import { User } from './user.entity';
 import { UserController } from './controllers/user.controller';
 import { UserService } from './services/user.service';
@@ -11,6 +12,23 @@ import { UserService } from './services/user.service';
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
+            // === ВАЛІДАЦІЯ КОНФІГУРАЦІЇ ===
+            validationSchema: Joi.object({
+                PORT: Joi.number().default(3000),
+                // Database
+                POSTGRES_HOST: Joi.string().required(),
+                POSTGRES_PORT: Joi.number().default(5432),
+                POSTGRES_USER: Joi.string().required(),
+                POSTGRES_PASSWORD: Joi.string().required(),
+                POSTGRES_DB: Joi.string().required(),
+                // RabbitMQ
+                RABBITMQ_URL: Joi.string().uri().required(),
+                RABBITMQ_QUEUE: Joi.string().default('notification_queue'),
+            }),
+            validationOptions: {
+                allowUnknown: true, // Дозволяємо інші змінні (наприклад, для Redis), які тут не використовуються
+                abortEarly: true,   // Зупинити при першій помилці
+            },
         }),
         // Використовуємо forRootAsync замість forRoot для динамічного завантаження конфігурації
         TypeOrmModule.forRootAsync({
