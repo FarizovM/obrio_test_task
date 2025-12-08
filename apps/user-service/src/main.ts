@@ -6,6 +6,8 @@ import helmet from 'helmet';
 async function bootstrap() {
   console.log('🚀 STARTING APP WITH APP_MODULE...');
   const app = await NestFactory.create(AppModule);
+  // Вмикаємо Graceful Shutdown для того щоб коректно закривати з'єднання з БД та RabbitMQ
+  app.enableShutdownHooks();
   // Вмикаємо Helmet для захисту заголовків
   app.use(helmet());
   // Вмикаємо глобальний пайп валідації

@@ -27,6 +27,9 @@ async function bootstrap() {
       },
     },
   );
+
+  // Вмикаємо Graceful Shutdown для того щоб коректно закривати з'єднання з БД та RabbitMQ
+  app.enableShutdownHooks();
   
   await app.listen();
   logger.log('Notification Microservice is listening');
