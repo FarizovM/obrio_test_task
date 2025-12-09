@@ -5,9 +5,10 @@ import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const logger = new Logger('NotificationService');
-  
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    NotificationModule,
+
+  const app = await NestFactory.create(NotificationModule);
+
+  app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.RMQ,
       options: {
@@ -30,8 +31,9 @@ async function bootstrap() {
 
   // Вмикаємо Graceful Shutdown для того щоб коректно закривати з'єднання з БД та RabbitMQ
   app.enableShutdownHooks();
-  
-  await app.listen();
-  logger.log('Notification Microservice is listening');
+
+  await app.startAllMicroservices();
+  await app.listen(3001); // Слухаємо порт 3001 для метрик
+  logger.log('Notification Service is running (HTTP: 3001, RMQ: Consumer)');
 }
 bootstrap();

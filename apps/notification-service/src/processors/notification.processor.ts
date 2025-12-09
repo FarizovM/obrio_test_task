@@ -4,15 +4,17 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 
 @Processor('push-queue')
 export class NotificationProcessor {
-    //Ініціалізуємо логер з контекстом класу
     private readonly logger = new Logger(NotificationProcessor.name);
 
     constructor(
         private readonly httpService: HttpService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        @InjectMetric('push_notifications_sent_total') public counter: Counter<string>,
     ) { }
 
     @Process('send-push')
@@ -28,6 +30,7 @@ export class NotificationProcessor {
         }
 
         try {
+            //відправляємо дані на вебхук
             await firstValueFrom(
                 this.httpService.post(webhookUrl, {
                     message: `Hello ${userData.name}, welcome to our service!`,
@@ -36,6 +39,8 @@ export class NotificationProcessor {
                 }),
             );
             this.logger.log(`Push notification sent successfully to ${userData.name}`);
+            // Збільшуємо лічильник метрики
+            this.counter.inc();
         } catch (error) {
             // Логуємо помилку як error, щоб бачити стек
             this.logger.error(`Failed to send push notification to ${userData.name}. Error: ${error.message}`);

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrometheusModule, makeCounterProvider } from '@willsoto/nestjs-prometheus';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientProvider, ClientsModule, Transport } from '@nestjs/microservices';
@@ -9,6 +10,13 @@ import { UserService } from './services/user.service';
 
 @Module({
     imports: [
+        //Підключаємо Prometheus глобально для всього сервісу
+        PrometheusModule.register({
+            path: '/metrics', // Ендпоінт для збору метрик
+            defaultMetrics: {
+                enabled: true, // Збирання стандартних метрик (CPU, RAM, Event Loop)
+            },
+        }),
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
@@ -29,6 +37,7 @@ import { UserService } from './services/user.service';
                 allowUnknown: true, // Дозволяємо інші змінні (наприклад, для Redis), які тут не використовуються
                 abortEarly: true,   // Зупинити при першій помилці
             },
+
         }),
         // Використовуємо forRootAsync замість forRoot для динамічного завантаження конфігурації
         TypeOrmModule.forRootAsync({
@@ -41,7 +50,7 @@ import { UserService } from './services/user.service';
                 password: configService.get<string>('POSTGRES_PASSWORD'),
                 database: configService.get<string>('POSTGRES_DB'),
                 entities: [User],
-                synchronize: false, // false для вимкнення автоматичного синхронізації (Для production)
+                synchronize: true, // false для вимкнення автоматичного синхронізації (Для production)
             }),
             inject: [ConfigService],
         }),
@@ -58,9 +67,9 @@ import { UserService } from './services/user.service';
                         queueOptions: {
                             durable: true,
                             arguments: {
-                                // Ті самі аргументи DLQ бажано вказати і тут, щоб RabbitMQ створив чергу правильно, 
+                                // Ті самі аргументи DLQ бажано вказати і в apps\notification-service\src\main.ts, щоб RabbitMQ створив чергу правильно, 
                                 // хто б перший не підключився (User або Notification сервіс).
-                                'x-dead-letter-exchange': '', 
+                                'x-dead-letter-exchange': '',
                                 'x-dead-letter-routing-key': 'dead_letter_notification_queue',
                                 // 'x-message-ttl': 5000 // Час життя повідомлення 
                             },
@@ -72,6 +81,13 @@ import { UserService } from './services/user.service';
         ]),
     ],
     controllers: [UserController],
-    providers: [UserService],
+    providers: [
+        UserService,
+        // кастомна метрика, лічильник юзерів
+        makeCounterProvider({
+            name: 'users_registered_total',
+            help: 'Total number of registered users',
+        }),
+    ],
 })
 export class AppModule { }

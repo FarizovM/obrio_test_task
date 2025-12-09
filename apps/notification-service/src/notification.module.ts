@@ -1,4 +1,4 @@
-// apps/notification-service/src/notification.module.ts
+import { PrometheusModule, makeCounterProvider } from '@willsoto/nestjs-prometheus';
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { HttpModule } from '@nestjs/axios';
@@ -9,6 +9,10 @@ import { NotificationProcessor } from './processors/notification.processor';
 
 @Module({
     imports: [
+        PrometheusModule.register({
+            path: '/metrics',
+            defaultMetrics: { enabled: true },
+        }),
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
@@ -45,6 +49,12 @@ import { NotificationProcessor } from './processors/notification.processor';
         HttpModule,
     ],
     controllers: [NotificationController],
-    providers: [NotificationProcessor],
+    providers: [
+        NotificationProcessor,
+        makeCounterProvider({
+            name: 'push_notifications_sent_total',
+            help: 'Total number of push notifications sent via webhook',
+        }),
+    ],
 })
 export class NotificationModule { }
